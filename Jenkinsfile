@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         TERRAFORM_VERSION = "1.9.8"
-        TF_BIN = "${WORKSPACE}/terraform"
+        TF_BIN = "${WORKSPACE}/terraform-bin"
     }
 
     stages {
@@ -25,10 +25,9 @@ pipeline {
                     echo "Unzipping..."
                     unzip -o terraform_${TERRAFORM_VERSION}_linux_amd64.zip
 
-                    echo "Moving to workspace..."
-                    mv terraform ${TF_BIN}
-
-                    chmod +x ${TF_BIN}
+                    echo "Renaming binary..."
+                    mv terraform terraform-bin
+                    chmod +x terraform-bin
                 '''
             }
         }
