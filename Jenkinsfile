@@ -2,17 +2,21 @@ pipeline {
     agent any
 
     environment {
-        TERRAFORM_VERSION = "1.9.8"
-        TF_BIN = "${WORKSPACE}/terraform-bin"
+        TERRAFORM_BIN = "${WORKSPACE}/terraform-bin"
+        PATH = "${env.PATH}:${WORKSPACE}"
+        SSH_KEY_PATH = "${WORKSPACE}/terraform/keys/devops_key.pub"
     }
 
     stages {
-
-        stage('Checkout Code') {
+        stage('Checkout SCM') {
             steps {
-                git branch: 'main',
-                    credentialsId: 'github-creds',
-                    url: 'https://github.com/utkarshapatilU/Terraform-Task.git'
+                checkout([$class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/utkarshapatilU/Terraform-Task.git',
+                        credentialsId: 'github-creds'
+                    ]]
+                ])
             }
         }
 
@@ -20,11 +24,9 @@ pipeline {
             steps {
                 sh '''
                     echo "Downloading Terraform..."
-                    wget -q https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip
-
+                    wget -q https://releases.hashicorp.com/terraform/1.9.8/terraform_1.9.8_linux_amd64.zip
                     echo "Unzipping..."
-                    unzip -o terraform_${TERRAFORM_VERSION}_linux_amd64.zip
-
+                    unzip -o terraform_1.9.8_linux_amd64.zip
                     echo "Renaming binary..."
                     mv terraform terraform-bin
                     chmod +x terraform-bin
@@ -35,7 +37,8 @@ pipeline {
         stage('Terraform Init') {
             steps {
                 sh '''
-                    ${TF_BIN} init
+                    echo "Initializing Terraform..."
+                    ${TERRAFORM_BIN} init || exit 1
                 '''
             }
         }
@@ -43,7 +46,12 @@ pipeline {
         stage('Terraform Validate') {
             steps {
                 sh '''
-                    ${TF_BIN} validate
+                    echo "Validating Terraform..."
+                    if [ ! -f "${SSH_KEY_PATH}" ]; then
+                        echo "ERROR: SSH public key not found at ${SSH_KEY_PATH}"
+                        exit 1
+                    fi
+                    ${TERRAFORM_BIN} validate || exit 1
                 '''
             }
         }
@@ -51,7 +59,8 @@ pipeline {
         stage('Terraform Plan') {
             steps {
                 sh '''
-                    ${TF_BIN} plan
+                    echo "Terraform Plan..."
+                    ${TERRAFORM_BIN} plan -var "public_key_path=${SSH_KEY_PATH}" || exit 1
                 '''
             }
         }
@@ -59,18 +68,19 @@ pipeline {
         stage('Terraform Apply') {
             steps {
                 sh '''
-                    ${TF_BIN} apply -auto-approve
+                    echo "Applying Terraform..."
+                    ${TERRAFORM_BIN} apply -auto-approve -var "public_key_path=${SSH_KEY_PATH}" || exit 1
                 '''
             }
         }
     }
 
     post {
+        success {
+            echo "Terraform pipeline completed successfully!"
+        }
         failure {
             echo "Terraform pipeline failed!"
-        }
-        success {
-            echo "Terraform pipeline executed successfully!"
         }
     }
 }
