@@ -1,29 +1,23 @@
 pipeline {
     agent any
 
+    environment {
+        TF_IN_AUTOMATION = "true"
+    }
+
     stages {
 
         stage('Checkout Code') {
             steps {
                 git branch: 'main',
-                    credentialsId: 'github-creds',
-                    url: 'https://github.com/utkarshapatilU/Terraform-Task.git'
-            }
-        }
-
-        stage('Install Terraform') {
-            steps {
-                sh '''
-                sudo yum install -y yum-utils
-                sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
-                sudo yum -y install terraform
-                terraform --version
-                '''
+                    url: 'https://github.com/utkarshapatilU/Terraform-Task.git',
+                    credentialsId: 'github-creds'
             }
         }
 
         stage('Terraform Init') {
             steps {
+                sh 'terraform --version'
                 sh 'terraform init'
             }
         }
@@ -41,6 +35,9 @@ pipeline {
         }
 
         stage('Terraform Apply') {
+            when {
+                expression { return params.APPLY == true }
+            }
             steps {
                 sh 'terraform apply -auto-approve'
             }
@@ -48,11 +45,11 @@ pipeline {
     }
 
     post {
-        failure {
-            echo "Deployment Failed!"
-        }
         success {
-            echo "Deployment Successful!"
+            echo "Terraform pipeline executed successfully!"
+        }
+        failure {
+            echo "Terraform pipeline failed!"
         }
     }
 }
