@@ -35,8 +35,6 @@ pipeline {
         stage('Terraform Init') {
             steps {
                 sh '''
-                    export PATH=$PATH:${WORKSPACE}
-                    cd terraform
                     ${TF_BIN} init
                 '''
             }
@@ -45,8 +43,6 @@ pipeline {
         stage('Terraform Validate') {
             steps {
                 sh '''
-                    export PATH=$PATH:${WORKSPACE}
-                    cd terraform
                     ${TF_BIN} validate
                 '''
             }
@@ -55,8 +51,6 @@ pipeline {
         stage('Terraform Plan') {
             steps {
                 sh '''
-                    export PATH=$PATH:${WORKSPACE}
-                    cd terraform
                     ${TF_BIN} plan
                 '''
             }
@@ -65,8 +59,6 @@ pipeline {
         stage('Terraform Apply') {
             steps {
                 sh '''
-                    export PATH=$PATH:${WORKSPACE}
-                    cd terraform
                     ${TF_BIN} apply -auto-approve
                 '''
             }
