@@ -2,114 +2,84 @@ pipeline {
     agent any
 
     environment {
-        TERRAFORM_BIN = "${WORKSPACE}/terraform/terraform-bin"
-        SSH_PRIVATE_KEY = "${WORKSPACE}/terraform/keys/devops_key" 
-        PATH = "${env.PATH}:${WORKSPACE}"
-        
-        AWS_ACCESS_KEY_ID = credentials('aws-access-key-id')
+        TERRAFORM_BIN = "${WORKSPACE}/terraform/terraform"
+        AWS_ACCESS_KEY_ID     = credentials('aws-access-key')
         AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
-        AWS_DEFAULT_REGION = 'ap-south-1'
+        AWS_DEFAULT_REGION     = "ap-south-1"
+        PATH = "${env.PATH}:${WORKSPACE}/terraform"
     }
 
     stages {
+
         stage('Checkout SCM') {
             steps {
-                echo "Cloning repository..."
-                checkout([$class: 'GitSCM',
-                    branches: [[name: '*/main']],
-                    userRemoteConfigs: [[
-                        url: 'https://github.com/utkarshapatilU/Terraform-Task.git',
-                        credentialsId: 'github-creds'
-                    ]]
-                ])
+                git branch: 'main',
+                    url: 'https://github.com/utkarshapatilU/Terraform-Task.git',
+                    credentialsId: 'github-creds'
             }
         }
 
-        stage('Download Terraform') {
+        stage("Install Terraform") {
             steps {
                 echo "Downloading Terraform..."
                 sh '''
                     set -x
                     wget -q https://releases.hashicorp.com/terraform/1.9.8/terraform_1.9.8_linux_amd64.zip
                     unzip -o terraform_1.9.8_linux_amd64.zip
-                    mv terraform ${TERRAFORM_BIN}
-                    chmod +x ${TERRAFORM_BIN}
+
+                    mkdir -p ${WORKSPACE}/terraform
+                    mv terraform ${WORKSPACE}/terraform/terraform
+                    chmod +x ${WORKSPACE}/terraform/terraform
                 '''
             }
         }
 
-        stage('Terraform Init') {
+        stage("Terraform Init") {
             steps {
-                echo "Initializing Terraform..."
                 sh '''
-                    set -x
-                    ${TERRAFORM_BIN} init || exit 1
+                    cd terraform
+                    ${TERRAFORM_BIN} init
                 '''
             }
         }
 
-        stage('Terraform Validate') {
+        stage("Terraform Validate") {
             steps {
-                echo "Validating Terraform configuration..."
                 sh '''
-                    set -x
-                    if [ ! -f "${SSH_PRIVATE_KEY}" ]; then
-                        echo "ERROR: SSH private key not found at ${SSH_PRIVATE_KEY}"
-                        exit 1
-                    fi
-                    ${TERRAFORM_BIN} validate || exit 1
+                    cd terraform
+                    ${TERRAFORM_BIN} validate
                 '''
             }
         }
 
-        stage('Terraform Plan') {
+        stage("Terraform Plan") {
             steps {
-                echo "Creating Terraform plan..."
                 sh '''
-                    set -x
-                    ${TERRAFORM_BIN} plan -var "private_key_path=${SSH_PRIVATE_KEY}" || exit 1
+                    cd terraform
+                    ${TERRAFORM_BIN} plan
                 '''
             }
         }
 
-        stage('Terraform Apply') {
-            steps {
-                echo "Applying Terraform..."
-                sh '''
-                    set -x
-                    ${TERRAFORM_BIN} apply -auto-approve -var "private_key_path=${SSH_PRIVATE_KEY}" || exit 1
-                '''
+        stage("Terraform Apply") {
+            when {
+                branch "main"
             }
-        }
-
-        stage('Generate Ansible Inventory') {
             steps {
-                echo "Generating dynamic Ansible inventory from Terraform output..."
                 sh '''
-                    set -x
-                    ${TERRAFORM_BIN} output -json > tf-output.json
-                    python3 scripts/generate_inventory.py tf-output.json inventory.ini
-                '''
-            }
-        }
-
-        stage('Run Ansible Playbook') {
-            steps {
-                echo "Running Ansible playbook..."
-                sh '''
-                    set -x
-                    ansible-playbook -i inventory.ini deploy.yml --private-key=${SSH_PRIVATE_KEY} --extra-vars "ansible_user=ubuntu"
+                    cd terraform
+                    ${TERRAFORM_BIN} apply -auto-approve
                 '''
             }
         }
     }
 
     post {
+        failure {
+            echo "Pipeline failed! Check the logs."
+        }
         success {
             echo "Pipeline completed successfully!"
-        }
-        failure {
-            echo "Pipeline failed! Check the console logs for errors."
         }
     }
 }
