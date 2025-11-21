@@ -20,19 +20,22 @@ pipeline {
         }
 
         stage("Install Terraform") {
-            steps {
-                echo "Downloading Terraform..."
-                sh '''
-                    set -x
-                    wget -q https://releases.hashicorp.com/terraform/1.9.8/terraform_1.9.8_linux_amd64.zip
-                    unzip -o terraform_1.9.8_linux_amd64.zip
+    steps {
+        echo "Downloading Terraform..."
+        sh '''
+            set -x
+            # Remove old terraform directory or file before installing
+            rm -rf ${WORKSPACE}/terraform
 
-                    mkdir -p ${WORKSPACE}/terraform
-                    mv terraform ${WORKSPACE}/terraform/terraform
-                    chmod +x ${WORKSPACE}/terraform/terraform
-                '''
-            }
-        }
+            wget -q https://releases.hashicorp.com/terraform/1.9.8/terraform_1.9.8_linux_amd64.zip
+            unzip -o terraform_1.9.8_linux_amd64.zip
+
+            mkdir -p ${WORKSPACE}/terraform
+            mv terraform ${WORKSPACE}/terraform/terraform
+            chmod +x ${WORKSPACE}/terraform/terraform
+        '''
+    }
+}
 
         stage("Terraform Init") {
             steps {
