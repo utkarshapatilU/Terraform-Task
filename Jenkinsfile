@@ -2,9 +2,9 @@ pipeline {
     agent any
 
     environment {
-        TERRAFORM_BIN = "${WORKSPACE}/infra/terraform-bin/terraform"
+        TERRAFORM_BIN = "${WORKSPACE}/infra/bin/terraform"
         AWS_DEFAULT_REGION = "ap-south-1"
-        PATH = "${env.PATH}:${WORKSPACE}/infra/terraform-bin"
+        PATH = "${env.PATH}:${WORKSPACE}/infra/bin"
     }
 
     stages {
@@ -27,8 +27,8 @@ pipeline {
                     # Ensure we're in the workspace root
                     cd ${WORKSPACE}
 
-                    # Remove old terraform directory if exists
-                    rm -rf infra/terraform-bin
+                    # Remove old terraform binary directory if exists
+                    rm -rf infra/bin
 
                     echo "Downloading Terraform..."
                     wget -q https://releases.hashicorp.com/terraform/1.9.8/terraform_1.9.8_linux_amd64.zip
@@ -37,15 +37,15 @@ pipeline {
                     unzip -o terraform_1.9.8_linux_amd64.zip
 
                     # Create directory and move terraform binary
-                    mkdir -p infra/terraform-bin
-                    mv terraform infra/terraform-bin/terraform
-                    chmod +x infra/terraform-bin/terraform
+                    mkdir -p infra/bin
+                    mv terraform infra/bin/terraform
+                    chmod +x infra/bin/terraform
 
                     # Clean up zip file
                     rm -f terraform_1.9.8_linux_amd64.zip LICENSE.txt
 
                     # Verify terraform is installed
-                    ${WORKSPACE}/infra/terraform-bin/terraform version
+                    ${WORKSPACE}/infra/bin/terraform version
                 '''
             }
         }
@@ -59,7 +59,7 @@ pipeline {
                     sh '''
                         export AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}"
                         export AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}"
-                        cd infra
+                        cd infra/terraform-bin
                         ${TERRAFORM_BIN} init
                     '''
                 }
@@ -75,7 +75,7 @@ pipeline {
                     sh '''
                         export AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}"
                         export AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}"
-                        cd infra
+                        cd infra/terraform-bin
                         ${TERRAFORM_BIN} validate
                     '''
                 }
@@ -91,7 +91,7 @@ pipeline {
                     sh '''
                         export AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}"
                         export AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}"
-                        cd infra
+                        cd infra/terraform-bin
                         ${TERRAFORM_BIN} plan
                     '''
                 }
@@ -110,7 +110,7 @@ pipeline {
                     sh '''
                         export AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}"
                         export AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}"
-                        cd infra
+                        cd infra/terraform-bin
                         ${TERRAFORM_BIN} apply -auto-approve
                     '''
                 }
