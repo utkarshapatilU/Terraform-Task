@@ -3,9 +3,7 @@ pipeline {
 
     environment {
         TERRAFORM_BIN = "${WORKSPACE}/infra/terraform-bin/terraform"
-        AWS_ACCESS_KEY_ID     = credentials('aws-access-key')
-        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
-        AWS_DEFAULT_REGION     = "ap-south-1"
+        AWS_DEFAULT_REGION = "ap-south-1"
         PATH = "${env.PATH}:${WORKSPACE}/infra/terraform-bin"
     }
 
@@ -54,28 +52,49 @@ pipeline {
 
         stage("Terraform Init") {
             steps {
-                sh '''
-                    cd infra
-                    ${TERRAFORM_BIN} init
-                '''
+                withCredentials([
+                    string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
+                    sh '''
+                        export AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}"
+                        export AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}"
+                        cd infra
+                        ${TERRAFORM_BIN} init
+                    '''
+                }
             }
         }
 
         stage("Terraform Validate") {
             steps {
-                sh '''
-                    cd infra
-                    ${TERRAFORM_BIN} validate
-                '''
+                withCredentials([
+                    string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
+                    sh '''
+                        export AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}"
+                        export AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}"
+                        cd infra
+                        ${TERRAFORM_BIN} validate
+                    '''
+                }
             }
         }
 
         stage("Terraform Plan") {
             steps {
-                sh '''
-                    cd infra
-                    ${TERRAFORM_BIN} plan
-                '''
+                withCredentials([
+                    string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
+                    sh '''
+                        export AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}"
+                        export AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}"
+                        cd infra
+                        ${TERRAFORM_BIN} plan
+                    '''
+                }
             }
         }
 
@@ -84,10 +103,17 @@ pipeline {
                 branch "main"
             }
             steps {
-                sh '''
-                    cd infra
-                    ${TERRAFORM_BIN} apply -auto-approve
-                '''
+                withCredentials([
+                    string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
+                    sh '''
+                        export AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}"
+                        export AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}"
+                        cd infra
+                        ${TERRAFORM_BIN} apply -auto-approve
+                    '''
+                }
             }
         }
     }
